@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DelayedNotifier - Отложенные уведомления</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .notifications-list {
+            margin-top: 30px;
+        }
+
+        .notification-item {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            transition: transform 0.2s;
+        }
+
+        .notification-item:hover {
+            transform: translateX(5px);
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .notification-id {
+            font-family: monospace;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-scheduled {
+            background: #cfe2ff;
+            color: #084298;
+        }
+
+        .status-sent {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #842029;
+        }
+
+        .status-cancelled {
+            background: #e2e3e5;
+            color: #41464b;
+        }
+
+        .notification-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .detail-item {
+            color: #666;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .message {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d1e7dd;
+            color: #0f5132;
+            border-left: 4px solid #0f5132;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #842029;
+            border-left: 4px solid #842029;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state::before {
+            content: "📭";
+            font-size: 48px;
+            display: block;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 DelayedNotifier</h1>
+
+        <div class="card">
+            <h2>Создать уведомление</h2>
+            <div id="alert-container"></div>
+            <form id="notification-form">
+                <div class="form-group">
+                    <label for="user_id">ID пользователя:</label>
+                    <input type="text" id="user_id" name="user_id" required placeholder="user123">
+                </div>
+
+                <div class="form-group">
+                    <label for="channel">Канал отправки:</label>
+                    <select id="channel" name="channel" required>
+                        <option value="email">Email</option>
+                        <option value="telegram">Telegram</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="recipient">Получатель:</label>
+                    <input type="text" id="recipient" name="recipient" required 
+                           placeholder="email@example.com или @telegram_username">
+                </div>
+
+                <div class="form-group">
+                    <label for="subject">Тема (опционально):</label>
+                    <input type="text" id="subject" name="subject" placeholder="Тема уведомления">
+                </div>
+
+                <div class="form-group">
+                    <label for="message">Сообщение:</label>
+                    <textarea id="message" name="message" required placeholder="Текст уведомления"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="scheduled_at">Время отправки:</label>
+                    <input type="datetime-local" id="scheduled_at" name="scheduled_at" required>
+                </div>
+
+                <button type="submit">Создать уведомление</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Список уведомлений</h2>
+            <button onclick="loadNotifications()" style="margin-bottom: 20px;">🔄 Обновить</button>
+            <div id="notifications-container">
+                <div class="loading">Загрузка...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Устанавливаем минимальное время на текущее + 1 минута
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 1);
+        const minDateTime = now.toISOString().slice(0, 16);
+        document.getElementById('scheduled_at').min = minDateTime;
+
+        // Обработка формы
+        document.getElementById('notification-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = {
+                user_id: formData.get('user_id'),
+                channel: formData.get('channel'),
+                recipient: formData.get('recipient'),
+                subject: formData.get('subject') || '',
+                message: formData.get('message'),
+                scheduled_at: new Date(formData.get('scheduled_at')).toISOString()
+            };
+
+            try {
+                const response = await fetch('/api/notify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('Уведомление успешно создано!', 'success');
+                    e.target.reset();
+                    loadNotifications();
+                } else {
+                    showAlert('Ошибка: ' + (result.error || 'Неизвестная ошибка'), 'error');
+                }
+            } catch (error) {
+                showAlert('Ошибка при создании уведомления: ' + error.message, 'error');
+            }
+        });
+
+        // Загрузка списка уведомлений
+        async function loadNotifications() {
+            const container = document.getElementById('notifications-container');
+            container.innerHTML = '<div class="loading">Загрузка...</div>';
+
+            try {
+                const response = await fetch('/api/notify');
+                const data = await response.json();
+
+                if (response.ok && data.notifications) {
+                    if (data.notifications.length === 0) {
+                        container.innerHTML = '<div class="empty-state">Нет уведомлений</div>';
+                        return;
+                    }
+
+                    container.innerHTML = data.notifications.map(notif => `
+                        <div class="notification-item">
+                            <div class="notification-header">
+                                <span class="notification-id">ID: ${notif.id}</span>
+                                <span class="status-badge status-${notif.status}">${getStatusText(notif.status)}</span>
+                            </div>
+                            <div class="notification-details">
+                                <div class="detail-item">
+                                    <span class="detail-label">Пользователь:</span> ${notif.user_id}
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Канал:</span> ${notif.channel}
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Получатель:</span> ${notif.recipient}
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Запланировано:</span> ${formatDateTime(notif.scheduled_at)}
+                                </div>
+                                ${notif.sent_at ? `
+                                <div class="detail-item">
+                                    <span class="detail-label">Отправлено:</span> ${formatDateTime(notif.sent_at)}
+                                </div>
+                                ` : ''}
+                                <div class="detail-item">
+                                    <span class="detail-label">Попыток:</span> ${notif.retry_count}
+                                </div>
+                            </div>
+                            ${notif.subject ? `<div class="message"><strong>${notif.subject}</strong></div>` : ''}
+                            <div class="message">${escapeHtml(notif.message)}</div>
+                            ${notif.status !== 'sent' && notif.status !== 'cancelled' ? `
+                                <button class="danger" onclick="cancelNotification('${notif.id}')" style="margin-top: 10px;">
+                                    Отменить
+                                </button>
+                            ` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="alert alert-error">Ошибка загрузки уведомлений</div>';
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="alert alert-error">Ошибка: ' + error.message + '</div>';
+            }
+        }
+
+        // Отмена уведомления
+        async function cancelNotification(id) {
+            if (!confirm('Вы уверены, что хотите отменить это уведомление?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/notify/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('Уведомление отменено', 'success');
+                    loadNotifications();
+                } else {
+                    showAlert('Ошибка: ' + (result.error || 'Неизвестная ошибка'), 'error');
+                }
+            } catch (error) {
+                showAlert('Ошибка при отмене уведомления: ' + error.message, 'error');
+            }
+        }
+
+        // Вспомогательные функции
+        function showAlert(message, type) {
+            const container = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            container.innerHTML = '';
+            container.appendChild(alert);
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': 'Ожидает',
+                'scheduled': 'Запланировано',
+                'sent': 'Отправлено',
+                'failed': 'Ошибка',
+                'cancelled': 'Отменено'
+            };
+            return statusMap[status] || status;
+        }
+
+        function formatDateTime(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleString('ru-RU', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Автоматическое обновление каждые 5 секунд
+        loadNotifications();
+        setInterval(loadNotifications, 5000);
+    </script>
+</body>
+</html>
+
