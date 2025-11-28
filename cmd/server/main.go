@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -59,8 +61,11 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		if err := workerUsecase.Start(ctx); err != nil {
+		defer wg.Done()
+		if err := workerUsecase.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
 			log.Printf("Ошибка воркера: %v", err)
 		}
 	}()
@@ -96,7 +101,7 @@ func main() {
 
 	go func() {
 		log.Printf("Сервер запущен на порту %s", cfg.ServerPort)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("Ошибка сервера: %v", err)
 		}
 	}()
@@ -108,14 +113,33 @@ func main() {
 
 	log.Println("Завершение работы...")
 
-	cancel() // Останавливаем воркера
+	// Останавливаем воркера
+	cancel()
 
-	ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
+	// Ожидаем завершения воркера с таймаутом
+	workerDone := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(workerDone)
+	}()
+
+	// Graceful shutdown сервера
+	ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelShutdown()
 
 	if err := srv.Shutdown(ctxShutdown); err != nil {
-		log.Fatalf("Ошибка при завершении сервера: %v", err)
+		log.Printf("Ошибка при завершении сервера: %v", err)
+	} else {
+		log.Println("Сервер остановлен")
 	}
 
-	log.Println("Сервер остановлен")
+	// Ожидаем завершения воркера или таймаут
+	select {
+	case <-workerDone:
+		log.Println("Воркер остановлен")
+	case <-time.After(5 * time.Second):
+		log.Println("Таймаут ожидания воркера")
+	}
+
+	log.Println("Приложение завершено")
 }

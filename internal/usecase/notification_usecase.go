@@ -56,10 +56,8 @@ func (u *NotificationUsecase) Create(ctx context.Context, req *entity.Notificati
 		return nil, err
 	}
 
-	// Кэшируем
-	if err := u.cacheRepo.Set(ctx, notification); err != nil {
-		// Логируем, но не прерываем выполнение
-	}
+	// Кэшируем (ошибка кэширования не критична)
+	_ = u.cacheRepo.Set(ctx, notification)
 
 	// Публикуем в очередь
 	if err := u.queueRepo.Publish(notification); err != nil {
@@ -83,10 +81,8 @@ func (u *NotificationUsecase) GetByID(ctx context.Context, id string) (*entity.N
 		return nil, err
 	}
 
-	// Обновляем кэш
-	if err := u.cacheRepo.Set(ctx, notification); err != nil {
-		// Логируем, но не прерываем выполнение
-	}
+	// Обновляем кэш (ошибка кэширования не критична)
+	_ = u.cacheRepo.Set(ctx, notification)
 
 	return notification, nil
 }
@@ -114,10 +110,8 @@ func (u *NotificationUsecase) Cancel(ctx context.Context, id string) error {
 		return err
 	}
 
-	// Удаляем из кэша
-	if err := u.cacheRepo.Delete(ctx, id); err != nil {
-		// Логируем, но не прерываем выполнение
-	}
+	// Удаляем из кэша (ошибка кэширования не критична)
+	_ = u.cacheRepo.Delete(ctx, id)
 
 	// Удаляем из хранилища
 	if err := u.notificationRepo.Delete(ctx, id); err != nil {

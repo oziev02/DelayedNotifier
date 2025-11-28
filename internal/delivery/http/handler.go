@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -44,7 +45,7 @@ func (h *Handler) GetNotification(c *gin.Context) {
 
 	notification, err := h.notificationUsecase.GetByID(c.Request.Context(), id)
 	if err != nil {
-		if err == repository.ErrNotFound {
+		if errors.Is(err, repository.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "уведомление не найдено"})
 			return
 		}
@@ -60,7 +61,7 @@ func (h *Handler) DeleteNotification(c *gin.Context) {
 	id := c.Param("id")
 
 	if err := h.notificationUsecase.Cancel(c.Request.Context(), id); err != nil {
-		if err == repository.ErrNotFound {
+		if errors.Is(err, repository.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "уведомление не найдено"})
 			return
 		}

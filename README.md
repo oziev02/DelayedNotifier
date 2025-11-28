@@ -26,6 +26,12 @@
 go mod download
 ```
 
+Или используйте Makefile:
+
+```bash
+make install
+```
+
 ### 2. Настройка переменных окружения
 
 Создайте файл `.env` или установите переменные окружения:
@@ -55,6 +61,12 @@ export TELEGRAM_CHAT_ID=your-chat-id
 #### Docker Compose (рекомендуется):
 
 ```bash
+make docker-up
+```
+
+Или напрямую:
+
+```bash
 docker-compose up -d
 ```
 
@@ -71,10 +83,39 @@ docker run -d --name redis -p 6379:6379 redis:alpine
 ### 4. Запуск приложения
 
 ```bash
+make run
+```
+
+Или напрямую:
+
+```bash
 go run cmd/server/main.go
 ```
 
 Сервис будет доступен по адресу: `http://localhost:8080`
+
+## Makefile команды
+
+Проект включает Makefile с полезными командами:
+
+```bash
+make help          # Показать все доступные команды
+make install       # Установить зависимости
+make build         # Собрать приложение
+make run           # Запустить приложение
+make test          # Запустить тесты
+make test-coverage # Тесты с покрытием кода
+make lint          # Проверить код линтером
+make fmt           # Форматировать код
+make vet           # Запустить go vet
+make clean         # Очистить скомпилированные файлы
+make docker-up     # Запустить RabbitMQ и Redis
+make docker-down   # Остановить Docker Compose
+make docker-logs   # Показать логи Docker
+make dev           # Запустить окружение разработки (Docker + приложение)
+make check         # Проверить код (fmt + vet + lint)
+make all           # Полная сборка (clean + deps + build + test)
+```
 
 ## API
 

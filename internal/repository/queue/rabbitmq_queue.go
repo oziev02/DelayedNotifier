@@ -60,12 +60,6 @@ func (r *RabbitMQQueue) Publish(notification *entity.Notification) error {
 		return err
 	}
 
-	// Вычисляем задержку до времени отправки
-	delay := time.Until(notification.ScheduledAt)
-	if delay < 0 {
-		delay = 0
-	}
-
 	// Используем RabbitMQ delayed message plugin или альтернативный подход
 	// Для простоты используем обычную публикацию, а задержку обработаем в consumer
 	return r.channel.Publish(
@@ -106,20 +100,20 @@ func (r *RabbitMQQueue) Consume() (<-chan *entity.Notification, error) {
 			var notification entity.Notification
 			if err := json.Unmarshal(msg.Body, &notification); err != nil {
 				log.Printf("Ошибка декодирования уведомления: %v", err)
-				msg.Nack(false, false) // не переотправлять
+				_ = msg.Nack(false, false) // не переотправлять
 				continue
 			}
 
 			// Проверяем, наступило ли время отправки
 			if time.Now().Before(notification.ScheduledAt) {
 				// Еще рано, возвращаем в очередь с небольшой задержкой
-				msg.Nack(false, true) // переотправить
+				_ = msg.Nack(false, true) // переотправить
 				time.Sleep(time.Second)
 				continue
 			}
 
 			notifications <- &notification
-			msg.Ack(false)
+			_ = msg.Ack(false)
 		}
 		close(notifications)
 	}()
