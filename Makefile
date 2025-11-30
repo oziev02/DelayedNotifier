@@ -1,4 +1,4 @@
-.PHONY: help build run test clean docker-up docker-down lint fmt vet deps install
+.PHONY: help build run clean docker-up docker-down lint fmt vet deps install
 
 # Переменные
 BINARY_NAME=delayednotifier
@@ -31,16 +31,6 @@ build: ## Собрать приложение
 run: ## Запустить приложение
 	@echo "$(GREEN)Запуск приложения...$(NC)"
 	go run $(MAIN_PATH)
-
-test: ## Запустить тесты
-	@echo "$(GREEN)Запуск тестов...$(NC)"
-	go test -v ./...
-
-test-coverage: ## Запустить тесты с покрытием
-	@echo "$(GREEN)Запуск тестов с покрытием...$(NC)"
-	go test -v -coverprofile=coverage.out ./...
-	go tool cover -html=coverage.out -o coverage.html
-	@echo "$(GREEN)Отчет сохранен в coverage.html$(NC)"
 
 lint: ## Запустить линтер
 	@echo "$(GREEN)Проверка кода линтером...$(NC)"
@@ -89,5 +79,5 @@ dev: docker-up run ## Запустить окружение разработки
 
 check: fmt vet lint ## Проверить код (форматирование, vet, линтер)
 
-all: clean deps build test ## Полная сборка: очистка, зависимости, сборка, тесты
+all: clean deps build ## Полная сборка: очистка, зависимости, сборка
 
